@@ -178,6 +178,7 @@ app.post('/reportStatus', async (req, res) => {
     }
 
     const record = result.recordset[0]; // 获取第一条数据
+    console.log('部门订单状态表record', record);
 
     // 2. 生成新的加工状态和照片信息
     const today = new Date().toISOString().split('T')[0]; // 获取当前日期，格式为 YYYY-MM-DD
@@ -193,6 +194,7 @@ app.post('/reportStatus', async (req, res) => {
         AND 公司订单号 = '${companyOrder}'
         AND 登记时间 = '${record.登记时间}' -- 确保更新的是查询到的第一条数据
     `;
+    console.log('部门订单状态表updateQuery', updateQuery);
     await sql.query(updateQuery);
 
     res.json({ success: true });
