@@ -184,12 +184,12 @@ app.post('/reportStatus', async (req, res) => {
     // 2. 生成新的加工状态和照片信息
     const today = new Date().toISOString().split('T')[0]; // 获取当前日期，格式为 YYYY-MM-DD
     const newProcess = record.加工状态 ? `${record.加工状态}→${today}号${process}` : `${today}号${process}`;
-    const newPhoto = record.照片 ? `${record.照片}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
+    const newPhoto = record.图片存储路径 ? `${record.图片存储路径}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
 
     // 3. 更新第一条数据的加工状态和照片信息
     const updateQuery = `
       UPDATE 部门订单状态表 
-      SET 加工状态 = '${newProcess}', 照片 = '${newPhoto}' 
+      SET 加工状态 = '${newProcess}', 图片存储路径 = '${newPhoto}' 
       WHERE 订单单号 = '${purchaseOrder}' 
         AND 序号 = '${serialNumber}' 
         AND 公司订单号 = '${companyOrder}'
