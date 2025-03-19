@@ -186,14 +186,17 @@ app.post('/reportStatus', async (req, res) => {
     const newProcess = record.加工状态 ? `${record.加工状态}→${today}号${process}` : `${today}号${process}`;
     const newPhoto = record.图片存储路径 ? `${record.图片存储路径}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
 
-    // 3. 更新第一条数据的加工状态和照片信息
+    // 3. 将登记时间格式化为 SQL Server 支持的 datetime 格式（包括毫秒）
+    const registrationTime = new Date(record.登记时间).toISOString().slice(0, 23).replace('T', ' ');
+
+    // 4. 更新第一条数据的加工状态和照片信息
     const updateQuery = `
       UPDATE 部门订单状态表 
       SET 加工状态 = '${newProcess}', 图片存储路径 = '${newPhoto}' 
       WHERE 订单单号 = '${purchaseOrder}' 
         AND 序号 = '${serialNumber}' 
         AND 公司订单号 = '${companyOrder}'
-        AND 登记时间 = ${record.登记时间}
+        AND 登记时间 = '${registrationTime}'
     `;
     console.log('部门订单状态表updateQuery', updateQuery);
     await sql.query(updateQuery);
