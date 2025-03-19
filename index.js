@@ -193,7 +193,7 @@ app.post('/reportStatus', async (req, res) => {
       WHERE 订单单号 = '${purchaseOrder}' 
         AND 序号 = '${serialNumber}' 
         AND 公司订单号 = '${companyOrder}'
-        AND 登记时间 = '${record.登记时间}' -- 确保更新的是查询到的第一条数据
+        AND 登记时间 = ${record.登记时间}
     `;
     console.log('部门订单状态表updateQuery', updateQuery);
     await sql.query(updateQuery);
