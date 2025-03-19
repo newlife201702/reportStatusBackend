@@ -13,8 +13,8 @@ app.use(cors());
 
 // SQL Server 配置
 const sqlConfig = {
-  user: 'wxy',
-  password: 'wxy000',
+  user: 'SA',
+  password: 'pioneer769',
   server: '116.228.102.254',
   port: 14333, // 端口号
   database: '派尼',
