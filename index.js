@@ -144,13 +144,32 @@ app.post('/reportStatus', async (req, res) => {
     //   WHERE 订单单号 = '${purchaseOrder}' AND 序号 = '${serialNumber}' AND 公司订单号 = '${companyOrder}'
     // `;
     // await sql.query(query);
+
     // 1. 查询当前加工状态和照片信息
+    // const query = `
+    //   SELECT 加工状态, 照片 
+    //   FROM 部门订单状态表 
+    //   WHERE 订单单号 = '${purchaseOrder}' 
+    //     AND 序号 = '${serialNumber}' 
+    //     AND 公司订单号 = '${companyOrder}'
+    // `;
+    // const result = await sql.query(query);
+
+    // if (result.recordset.length === 0) {
+    //   return res.status(404).json({ error: '未找到订单记录' });
+    // }
+
+    // const currentProcess = result.recordset[0].加工状态 || '';
+    // const currentPhoto = result.recordset[0].照片 || '';
+
+    // 1. 按“登记时间”倒序查询数据
     const query = `
-      SELECT 加工状态, 照片 
+      SELECT TOP 1 * 
       FROM 部门订单状态表 
-      WHERE 订单单号 = '${purchaseOrder}' 
+      WHERE 采购单号 = '${purchaseOrder}' 
         AND 序号 = '${serialNumber}' 
         AND 公司订单号 = '${companyOrder}'
+      ORDER BY 登记时间 DESC
     `;
     const result = await sql.query(query);
 
@@ -158,21 +177,21 @@ app.post('/reportStatus', async (req, res) => {
       return res.status(404).json({ error: '未找到订单记录' });
     }
 
-    const currentProcess = result.recordset[0].加工状态 || '';
-    const currentPhoto = result.recordset[0].照片 || '';
+    const record = result.recordset[0]; // 获取第一条数据
 
     // 2. 生成新的加工状态和照片信息
     const today = new Date().toISOString().split('T')[0]; // 获取当前日期，格式为 YYYY-MM-DD
-    const newProcess = currentProcess ? `${currentProcess}→${today}号${process}` : `${today}号${process}`;
-    const newPhoto = currentPhoto ? `${currentPhoto}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
+    const newProcess = record.加工状态 ? `${record.加工状态}→${today}号${process}` : `${today}号${process}`;
+    const newPhoto = record.照片 ? `${record.照片}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
 
-    // 3. 更新加工状态和照片信息
+    // 3. 更新第一条数据的加工状态和照片信息
     const updateQuery = `
       UPDATE 部门订单状态表 
       SET 加工状态 = '${newProcess}', 照片 = '${newPhoto}' 
       WHERE 订单单号 = '${purchaseOrder}' 
         AND 序号 = '${serialNumber}' 
         AND 公司订单号 = '${companyOrder}'
+        AND 登记时间 = '${record.登记时间}' -- 确保更新的是查询到的第一条数据
     `;
     await sql.query(updateQuery);
 
