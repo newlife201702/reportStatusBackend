@@ -86,6 +86,7 @@ app.post('/scan', async (req, res) => {
       return;
     } else {
       foundOrder = orderBarcodeResult.recordset[0];
+      console.log('foundOrder', foundOrder);
     }
 
     // 2. 在部门未完成订单整理表中查询
@@ -166,7 +167,7 @@ app.post('/reportStatus', async (req, res) => {
     const query = `
       SELECT TOP 1 * 
       FROM 部门订单状态表 
-      WHERE 采购单号 = '${purchaseOrder}' 
+      WHERE 订单单号 = '${purchaseOrder}' 
         AND 序号 = '${serialNumber}' 
         AND 公司订单号 = '${companyOrder}'
       ORDER BY 登记时间 DESC
