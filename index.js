@@ -218,7 +218,7 @@ app.post('/reportStatus', async (req, res) => {
     // console.log('部门订单状态表updateQuery', updateQuery);
     // await sql.query(updateQuery);
 
-    const insertQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${new Date().toISOString().slice(0, 10)}', '${new Date().toISOString().slice(0, 23).replace('T', ' ')}', '${companyOrder}', '${record.行号}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
+    const insertQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${new Date().toISOString().slice(0, 10)}', '${new Date().toISOString().slice(0, 23).replace('T', ' ')}', '${companyOrder}', '${record.行号}', '${record.图号}', '${record.名称}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
     console.log('部门订单状态表insertQuery', insertQuery);
     await sql.query(insertQuery);
 
