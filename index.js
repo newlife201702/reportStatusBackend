@@ -108,7 +108,7 @@ app.post('/scan', async (req, res) => {
 
 // 获取工序名称
 app.post('/getProcessOptions', async (req, res) => {
-  const { drawingNumber, materialNumber, drawingVersion } = req.body;
+  const { drawingNumber, materialNumber, drawingVersion, purchaseOrder, serialNumber, companyOrder } = req.body;
 
   try {
     await sql.connect(sqlConfig);
@@ -124,7 +124,24 @@ app.post('/getProcessOptions', async (req, res) => {
         `${item.工序名称}中`,
         `${item.工序名称}完成`
       ]);
-      res.json({ processOptions });
+
+      // 按“登记时间”倒序查询数据
+      const query2 = `
+        SELECT TOP 1 * 
+        FROM 部门订单状态表 
+        WHERE 订单单号 = '${purchaseOrder}' 
+          AND 序号 = '${serialNumber}' 
+          AND 公司订单号 = '${companyOrder}'
+        ORDER BY 登记时间 DESC
+      `;
+      const result2 = await sql.query(query2);
+      if (result.recordset.length === 0) {
+        return res.status(404).json({ error: '未找到订单记录' });
+      }
+      const record = result2.recordset[0]; // 获取第一条数据
+      const stepList = record.加工状态 ? record.加工状态.split('→').filter(path => path.split('号')[1]).map(item2 => item2.split('号')[1]) : [];
+      const newProcessOptions = processOptions.filter(item => !stepList.includes(item));
+      res.json({ processOptions: newProcessOptions });
     } else {
       res.json({ processOptions: [] });
     }
@@ -135,7 +152,7 @@ app.post('/getProcessOptions', async (req, res) => {
 
 // 上报加工状态
 app.post('/reportStatus', async (req, res) => {
-  const { purchaseOrder, serialNumber, companyOrder, process, photoUrl } = req.body;
+  const { purchaseOrder, serialNumber, companyOrder, process, photoUrl, name, department } = req.body;
 
   try {
     await sql.connect(sqlConfig);
@@ -187,19 +204,23 @@ app.post('/reportStatus', async (req, res) => {
     const newPhoto = record.图片存储路径 ? `${record.图片存储路径}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
 
     // 3. 将登记时间格式化为 SQL Server 支持的 datetime 格式（包括毫秒）
-    const registrationTime = new Date(record.登记时间).toISOString().slice(0, 23).replace('T', ' ');
+    // const registrationTime = new Date(record.登记时间).toISOString().slice(0, 23).replace('T', ' ');
 
     // 4. 更新第一条数据的加工状态和照片信息
-    const updateQuery = `
-      UPDATE 部门订单状态表 
-      SET 加工状态 = '${newProcess}', 图片存储路径 = '${newPhoto}' 
-      WHERE 订单单号 = '${purchaseOrder}' 
-        AND 序号 = '${serialNumber}' 
-        AND 公司订单号 = '${companyOrder}'
-        AND 登记时间 = '${registrationTime}'
-    `;
-    console.log('部门订单状态表updateQuery', updateQuery);
-    await sql.query(updateQuery);
+    // const updateQuery = `
+    //   UPDATE 部门订单状态表 
+    //   SET 加工状态 = '${newProcess}', 图片存储路径 = '${newPhoto}' 
+    //   WHERE 订单单号 = '${purchaseOrder}' 
+    //     AND 序号 = '${serialNumber}' 
+    //     AND 公司订单号 = '${companyOrder}'
+    //     AND 登记时间 = '${registrationTime}'
+    // `;
+    // console.log('部门订单状态表updateQuery', updateQuery);
+    // await sql.query(updateQuery);
+
+    const insertQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${new Date().toISOString().slice(0, 10)}', '${new Date().toISOString().slice(0, 23).replace('T', ' ')}', '${companyOrder}', '${record.行号}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
+    console.log('部门订单状态表insertQuery', insertQuery);
+    await sql.query(insertQuery);
 
     res.json({ success: true });
   } catch (err) {
@@ -226,7 +247,7 @@ app.post('/auth', (req, res) => {
     if (error) {
       res.status(500).json({ error: error.message });
     } else if (results.length > 0) {
-      res.json({ role: results[0].role, department: results[0].department });
+      res.json({ name: results[0].name, role: results[0].role, department: results[0].department });
     } else {
       res.json({ error: '用户未注册，请联系管理员' });
     }
@@ -235,15 +256,15 @@ app.post('/auth', (req, res) => {
 
 // 查看订单（分页查询）
 app.post('/viewOrders', async (req, res) => {
-  const { role, department, page = 1, pageSize = 10 } = req.body;
+  const { role, department, page = 1, pageSize = 10, drawingNumber } = req.body;
 
   try {
     await sql.connect(sqlConfig);
     let query;
     if (role === '超级管理员') {
-      query = `SELECT * FROM 部门订单状态表 ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
+      query = `SELECT * FROM 部门订单状态表 ${drawingNumber ? `WHERE 图号 = '${drawingNumber}'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
     } else if (role === '部门管理员') {
-      query = `SELECT * FROM 部门订单状态表 WHERE 部门 = '${department}' ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
+      query = `SELECT * FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
     } else {
       res.status(403).json({ error: '无权访问' });
       return;
@@ -253,8 +274,8 @@ app.post('/viewOrders', async (req, res) => {
     const result = await sql.query(query);
     // 查询总条数
     const countQuery = role === '超级管理员' 
-      ? 'SELECT COUNT(*) AS total FROM 部门订单状态表' 
-      : `SELECT COUNT(*) AS total FROM 部门订单状态表 WHERE 部门 = '${department}'`;
+      ? `SELECT COUNT(*) AS total FROM 部门订单状态表 ${drawingNumber ? `WHERE 图号 = '${drawingNumber}'` : ''}` 
+      : `SELECT COUNT(*) AS total FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''}`;
     const countResult = await sql.query(countQuery);
 
     res.json({
