@@ -218,7 +218,14 @@ app.post('/reportStatus', async (req, res) => {
     // console.log('部门订单状态表updateQuery', updateQuery);
     // await sql.query(updateQuery);
 
-    const insertQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${new Date().toISOString().slice(0, 10)}', '${new Date().toISOString().slice(0, 23).replace('T', ' ')}', '${companyOrder}', '${record.行号}', '${record.图号}', '${record.名称}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
+    // 获取当前时间
+    const now = new Date();
+    // 将时间调整为东八区时间（UTC+8）
+    const offset = 8; // 中国是东八区
+    const chinaTime = new Date(now.getTime() + offset * 60 * 60 * 1000);
+    // 格式化为ISO字符串并替换'T'为空格
+    const chinaTimeString = chinaTime.toISOString().slice(0, 23).replace('T', ' ');
+    const insertQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${chinaTimeString.slice(0, 10)}', '${chinaTimeString}', '${companyOrder}', '${record.行号}', '${record.图号}', '${record.名称}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
     console.log('部门订单状态表insertQuery', insertQuery);
     await sql.query(insertQuery);
 
