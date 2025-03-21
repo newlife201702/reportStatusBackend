@@ -152,7 +152,7 @@ app.post('/getProcessOptions', async (req, res) => {
 
 // 上报加工状态
 app.post('/reportStatus', async (req, res) => {
-  const { purchaseOrder, serialNumber, companyOrder, process, photoUrl, name, department } = req.body;
+  const { purchaseOrder, serialNumber, companyOrder, lineNumber, drawingNumber, orderName, process, photoUrl, name, department } = req.body;
 
   try {
     await sql.connect(sqlConfig);
@@ -191,17 +191,13 @@ app.post('/reportStatus', async (req, res) => {
     `;
     const result = await sql.query(query);
 
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: '未找到订单记录' });
-    }
-
     const record = result.recordset[0]; // 获取第一条数据
     console.log('部门订单状态表record', record);
 
     // 2. 生成新的加工状态和照片信息
     const today = new Date().toISOString().split('T')[0]; // 获取当前日期，格式为 YYYY-MM-DD
-    const newProcess = record.加工状态 ? `${record.加工状态}→${today}号${process}` : `${today}号${process}`;
-    const newPhoto = record.图片存储路径 ? `${record.图片存储路径}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
+    const newProcess = record?.加工状态 ? `${record.加工状态}→${today}号${process}` : `${today}号${process}`;
+    const newPhoto = record?.图片存储路径 ? `${record.图片存储路径}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
 
     // 3. 将登记时间格式化为 SQL Server 支持的 datetime 格式（包括毫秒）
     // const registrationTime = new Date(record.登记时间).toISOString().slice(0, 23).replace('T', ' ');
@@ -225,6 +221,15 @@ app.post('/reportStatus', async (req, res) => {
     const chinaTime = new Date(now.getTime() + offset * 60 * 60 * 1000);
     // 格式化为ISO字符串并替换'T'为空格
     const chinaTimeString = chinaTime.toISOString().slice(0, 23).replace('T', ' ');
+
+    if (result.recordset.length === 0) {
+      console.log('reportStatus:未找到订单记录');
+      const insertNewQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${chinaTimeString.slice(0, 10)}', '${chinaTimeString}', '${companyOrder}', '${lineNumber}', '${drawingNumber}', '${orderName}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
+      console.log('部门订单状态表insertNewQuery', insertNewQuery);
+      await sql.query(insertNewQuery);
+      return res.json({ success: true });
+    }
+
     const insertQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${chinaTimeString.slice(0, 10)}', '${chinaTimeString}', '${companyOrder}', '${record.行号}', '${record.图号}', '${record.名称}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
     console.log('部门订单状态表insertQuery', insertQuery);
     await sql.query(insertQuery);
