@@ -267,27 +267,55 @@ app.post('/viewOrders', async (req, res) => {
 
   try {
     await sql.connect(sqlConfig);
+
+    // 1. 查询所有数据
     let query;
     if (role === '超级管理员') {
-      query = `SELECT * FROM 部门订单状态表 WHERE 1=1 ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
+      query = `
+        SELECT * 
+        FROM 部门订单状态表 
+        ORDER BY 订单单号, 序号, 公司订单号, 登记时间 DESC
+      `;
     } else if (role === '部门管理员') {
-      query = `SELECT * FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
+      query = `
+        SELECT * 
+        FROM 部门订单状态表 
+        WHERE 部门 = '${department}' 
+        ORDER BY 订单单号, 序号, 公司订单号, 登记时间 DESC
+      `;
     } else {
-      res.status(403).json({ error: '无权访问' });
-      return;
+      return res.status(403).json({ error: '无权访问' });
     }
 
-    // 查询分页数据
     const result = await sql.query(query);
-    // 查询总条数
-    const countQuery = role === '超级管理员' 
-      ? `SELECT COUNT(*) AS total FROM 部门订单状态表 WHERE 1=1 ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''}` 
-      : `SELECT COUNT(*) AS total FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''}`;
-    const countResult = await sql.query(countQuery);
+
+    // 2. 分组并取每组最新数据
+    const groupedData = {};
+    result.recordset.forEach((item) => {
+      const key = `${item.订单单号}-${item.序号}-${item.公司订单号}`;
+      if (!groupedData[key] || new Date(item.登记时间) > new Date(groupedData[key].登记时间)) {
+        groupedData[key] = item;
+      }
+    });
+
+    // 3. 汇总数据
+    const allData = Object.values(groupedData);
+
+    // 4. 筛选数据
+    const filteredData = allData.filter((item) => {
+      const matchDrawingNumber = drawingNumber ? item.图号 === drawingNumber : true;
+      const matchName = name ? item.名称.includes(name) : true;
+      return matchDrawingNumber && matchName;
+    });
+
+    // 5. 分页
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
 
     res.json({
-      orders: result.recordset,
-      total: countResult.recordset[0].total,
+      orders: paginatedData,
+      total: filteredData.length,
       page,
       pageSize
     });
