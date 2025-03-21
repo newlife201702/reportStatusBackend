@@ -263,15 +263,15 @@ app.post('/auth', (req, res) => {
 
 // 查看订单（分页查询）
 app.post('/viewOrders', async (req, res) => {
-  const { role, department, page = 1, pageSize = 10, drawingNumber } = req.body;
+  const { role, department, page = 1, pageSize = 10, drawingNumber, name } = req.body;
 
   try {
     await sql.connect(sqlConfig);
     let query;
     if (role === '超级管理员') {
-      query = `SELECT * FROM 部门订单状态表 ${drawingNumber ? `WHERE 图号 = '${drawingNumber}'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
+      query = `SELECT * FROM 部门订单状态表 WHERE 1=1 ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
     } else if (role === '部门管理员') {
-      query = `SELECT * FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
+      query = `SELECT * FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''} ORDER BY 登记时间 DESC OFFSET ${(page - 1) * pageSize} ROWS FETCH NEXT ${pageSize} ROWS ONLY`;
     } else {
       res.status(403).json({ error: '无权访问' });
       return;
@@ -281,8 +281,8 @@ app.post('/viewOrders', async (req, res) => {
     const result = await sql.query(query);
     // 查询总条数
     const countQuery = role === '超级管理员' 
-      ? `SELECT COUNT(*) AS total FROM 部门订单状态表 ${drawingNumber ? `WHERE 图号 = '${drawingNumber}'` : ''}` 
-      : `SELECT COUNT(*) AS total FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''}`;
+      ? `SELECT COUNT(*) AS total FROM 部门订单状态表 WHERE 1=1 ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''}` 
+      : `SELECT COUNT(*) AS total FROM 部门订单状态表 WHERE 部门 = '${department}' ${drawingNumber ? `AND 图号 = '${drawingNumber}'` : ''} ${name ? `AND 名称 LIKE '%${name}%'` : ''}`;
     const countResult = await sql.query(countQuery);
 
     res.json({
