@@ -34,8 +34,10 @@ const mysqlConfig = {
 
 // 微信配置
 const wxConfig = {
-  appId: 'wx76b0de7432d1b270',
-  appSecret: '3a1552b60832b722001b03a6a195f298'
+  // appId: 'wx76b0de7432d1b270',
+  // appSecret: '3a1552b60832b722001b03a6a195f298'
+  appId: 'wx8617ae63d325eb21',
+  appSecret: '563dc235393ea78de57b00e540bf6a3b'
 };
 
 // 文件上传配置
