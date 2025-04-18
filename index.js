@@ -15,7 +15,7 @@ app.use(cors());
 const sqlConfig = {
   user: 'SA',
   password: 'pioneer769',
-  server: '116.228.102.254',
+  server: '58.34.42.130',
   port: 14333, // 端口号
   database: '派尼',
   options: {
