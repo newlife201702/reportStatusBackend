@@ -136,9 +136,11 @@ app.post('/getProcessOptions', async (req, res) => {
           AND 公司订单号 = '${companyOrder}'
         ORDER BY 登记时间 DESC
       `;
+      console.log('query2', query2);
       const result2 = await sql.query(query2);
-      if (result.recordset.length === 0) {
-        return res.status(404).json({ error: '未找到订单记录' });
+      console.log('result2', result2);
+      if (result2.recordset.length === 0) {
+        return res.json({ processOptions });
       }
       const record = result2.recordset[0]; // 获取第一条数据
       const stepList = record.加工状态 ? record.加工状态.split('→').filter(path => path.split('号')[1]).map(item2 => item2.split('号')[1]) : [];
