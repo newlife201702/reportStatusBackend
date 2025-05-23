@@ -199,7 +199,11 @@ app.post('/reportStatus', async (req, res) => {
     console.log('部门订单状态表record', record);
 
     // 2. 生成新的加工状态和照片信息
-    const today = new Date().toISOString().split('T')[0]; // 获取当前日期，格式为 YYYY-MM-DD
+    // 获取当前时间
+    const now = new Date();
+    // 将时间调整为东八区时间（UTC+8）
+    const offset = 8; // 中国是东八区
+    const today = new Date(now.getTime() + offset * 60 * 60 * 1000).toISOString().split('T')[0]; // 获取当前日期，格式为 YYYY-MM-DD
     const newProcess = record?.加工状态 ? `${record.加工状态}→${today}号${process}` : `${today}号${process}`;
     const newPhoto = record?.图片存储路径 ? `${record.图片存储路径}→${today}号${photoUrl}` : `${today}号${photoUrl}`;
 
@@ -218,10 +222,7 @@ app.post('/reportStatus', async (req, res) => {
     // console.log('部门订单状态表updateQuery', updateQuery);
     // await sql.query(updateQuery);
 
-    // 获取当前时间
-    const now = new Date();
-    // 将时间调整为东八区时间（UTC+8）
-    const offset = 8; // 中国是东八区
+
     const chinaTime = new Date(now.getTime() + offset * 60 * 60 * 1000);
     // 格式化为ISO字符串并替换'T'为空格
     const chinaTimeString = chinaTime.toISOString().slice(0, 23).replace('T', ' ');
