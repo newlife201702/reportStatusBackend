@@ -235,9 +235,20 @@ app.post('/reportStatus', async (req, res) => {
       return res.json({ success: true });
     }
 
-    const insertQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${chinaTimeString.slice(0, 10)}', '${chinaTimeString}', '${companyOrder}', '${record.行号}', '${record.图号}', '${record.名称}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
-    console.log('部门订单状态表insertQuery', insertQuery);
-    await sql.query(insertQuery);
+    // 更新已存在的记录，而不是插入新记录
+    const updateQuery = `UPDATE 部门订单状态表 
+      SET 加工状态 = '${newProcess}', 
+          图片存储路径 = '${newPhoto}',
+          登记日期 = '${chinaTimeString.slice(0, 10)}', 
+          登记时间 = '${chinaTimeString}',
+          部门 = '${department}', 
+          登记人员 = '${name}'
+      WHERE 订单单号 = '${purchaseOrder}' 
+        AND 序号 = '${serialNumber}' 
+        AND 公司订单号 = '${companyOrder}'
+        AND 登记时间 = '${record.登记时间}'`;
+    console.log('部门订单状态表updateQuery', updateQuery);
+    await sql.query(updateQuery);
 
     res.json({ success: true });
   } catch (err) {
