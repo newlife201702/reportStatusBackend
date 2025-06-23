@@ -131,17 +131,28 @@ app.post('/adminScan', async (req, res) => {
       console.log('foundOrder', foundOrder);
     }
 
-    // 2. 在部门订单状态表中查询
-    const orderStatusQuery = `SELECT TOP 1 * FROM 部门订单状态表 WHERE 订单单号 = '${foundOrder.订单单号}' AND 序号 = '${foundOrder.序号}' AND 公司订单号 = '${foundOrder.公司订单号}' ORDER BY 登记时间 DESC`;
-    const orderStatusResult = await sql.query(orderStatusQuery);
+    // 2. 在部门未完成订单整理表中查询
+    const unfinishedOrderQuery = `SELECT * FROM 部门未完成订单整理 WHERE 订单单号 = '${foundOrder.订单单号}' AND 序号 = '${foundOrder.序号}' AND 公司订单号 = '${foundOrder.公司订单号}'`;
+    const unfinishedOrderResult = await sql.query(unfinishedOrderQuery);
 
-    if (orderStatusResult.recordset.length > 0) {
-      console.log('orderStatusResult.recordset[0]', orderStatusResult.recordset[0]);
-      // 如果部门订单状态表中有记录，返回订单
-      res.json({ status: 'found', data: orderStatusResult.recordset[0] });
+    if (unfinishedOrderResult.recordset.length > 0) {
+      console.log('unfinishedOrderResult.recordset[0]', unfinishedOrderResult.recordset[0]);
+      // 如果部门未完成订单整理表中有记录，继续在部门订单状态表中查询
+      // 3. 在部门订单状态表中查询
+      const orderStatusQuery = `SELECT TOP 1 * FROM 部门订单状态表 WHERE 订单单号 = '${foundOrder.订单单号}' AND 序号 = '${foundOrder.序号}' AND 公司订单号 = '${foundOrder.公司订单号}' ORDER BY 登记时间 DESC`;
+      const orderStatusResult = await sql.query(orderStatusQuery);
+
+      if (orderStatusResult.recordset.length > 0) {
+        console.log('orderStatusResult.recordset[0]', orderStatusResult.recordset[0]);
+        // 如果部门订单状态表中有记录，返回订单
+        res.json({ status: 'found', data: orderStatusResult.recordset[0] });
+      } else {
+        // 如果部门订单状态表中没有记录，提示"订单不存在"
+        res.json({ status: 'not_found', message: '订单不存在' });
+      }
     } else {
-      // 如果部门订单状态表中没有记录，提示"订单不存在"
-      res.json({ status: 'not_found', message: '订单不存在' });
+      // 如果部门未完成订单整理表中没有记录，提示"订单已完成"
+      res.json({ status: 'completed', message: '订单已完成' });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
