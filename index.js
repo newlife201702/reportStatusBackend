@@ -83,7 +83,7 @@ app.post('/scan', async (req, res) => {
 
     let foundOrder;
     if (orderBarcodeResult.recordset.length === 0) {
-      // 如果订单条码表中没有记录，提示“订单不存在”
+      // 如果订单条码表中没有记录，提示"订单不存在"
       res.json({ status: 'not_found', message: '订单不存在' });
       return;
     } else {
@@ -100,7 +100,7 @@ app.post('/scan', async (req, res) => {
       // 如果部门未完成订单整理表中有记录，让用户上报加工状态
       res.json({ status: 'found', data: unfinishedOrderResult.recordset[0] });
     } else {
-      // 如果部门未完成订单整理表中没有记录，提示“订单已完成”
+      // 如果部门未完成订单整理表中没有记录，提示"订单已完成"
       res.json({ status: 'completed', message: '订单已完成' });
     }
   } catch (err) {
@@ -127,7 +127,7 @@ app.post('/getProcessOptions', async (req, res) => {
         `${item.工序名称}完成`
       ]);
 
-      // 按“登记时间”倒序查询数据
+      // 按"登记时间"倒序查询数据
       const query2 = `
         SELECT TOP 1 * 
         FROM 部门订单状态表 
@@ -184,7 +184,7 @@ app.post('/reportStatus', async (req, res) => {
     // const currentProcess = result.recordset[0].加工状态 || '';
     // const currentPhoto = result.recordset[0].照片 || '';
 
-    // 1. 按“登记时间”倒序查询数据
+    // 1. 按"登记时间"倒序查询数据
     const query = `
       SELECT TOP 1 * 
       FROM 部门订单状态表 
@@ -332,6 +332,54 @@ app.post('/viewOrders', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// 保存用户信息
+app.post('/saveUserInfo', (req, res) => {
+  const { openid, name, role, department } = req.body;
+  
+  // 验证必要参数
+  if (!openid || !name || !role || !department) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+
+  const connection = mysql.createConnection(mysqlConfig);
+  
+  // 检查用户是否已存在
+  connection.query('SELECT * FROM 人员表 WHERE openid = ?', [openid], (error, results) => {
+    if (error) {
+      connection.end();
+      return res.status(500).json({ error: error.message });
+    }
+    
+    if (results.length > 0) {
+      // 用户已存在，更新信息
+      connection.query(
+        'UPDATE 人员表 SET name = ?, role = ?, department = ? WHERE openid = ?',
+        [name, role, department, openid],
+        (updateError) => {
+          connection.end();
+          if (updateError) {
+            return res.status(500).json({ error: updateError.message });
+          }
+          res.json({ success: true, message: '用户信息已更新' });
+        }
+      );
+    } else {
+      // 用户不存在，创建新用户
+      connection.query(
+        'INSERT INTO 人员表 (openid, name, role, department) VALUES (?, ?, ?, ?)',
+        [openid, name, role, department],
+        (insertError) => {
+          connection.end();
+          if (insertError) {
+            return res.status(500).json({ error: insertError.message });
+          }
+          res.json({ success: true, message: '用户信息已保存' });
+        }
+      );
+    }
+  });
 });
 
 app.listen(2910, () => {
