@@ -108,6 +108,46 @@ app.post('/scan', async (req, res) => {
   }
 });
 
+// 管理员二维码扫描处理
+app.post('/adminScan', async (req, res) => {
+  const { qrCodeData } = req.body;
+  const [_, purchaseOrder, serialNumber, companyOrder] = qrCodeData.split(',');
+  console.log("adminScan_qrCodeData.split(',')", qrCodeData.split(','), '_, purchaseOrder, serialNumber, companyOrder', _, purchaseOrder, serialNumber, companyOrder);
+
+  try {
+    await sql.connect(sqlConfig);
+
+    // 1. 先在订单条码表中查询
+    const orderBarcodeQuery = `SELECT * FROM 订单条码表 WHERE 采购单号 = '${purchaseOrder}' AND 采购单序号 = '${serialNumber}' AND 公司订单号 = '${companyOrder}'`;
+    const orderBarcodeResult = await sql.query(orderBarcodeQuery);
+
+    let foundOrder;
+    if (orderBarcodeResult.recordset.length === 0) {
+      // 如果订单条码表中没有记录，提示"订单不存在"
+      res.json({ status: 'not_found', message: '订单不存在' });
+      return;
+    } else {
+      foundOrder = orderBarcodeResult.recordset[0];
+      console.log('foundOrder', foundOrder);
+    }
+
+    // 2. 在部门订单状态表中查询
+    const orderStatusQuery = `SELECT TOP 1 * FROM 部门订单状态表 WHERE 订单单号 = '${foundOrder.订单单号}' AND 序号 = '${foundOrder.序号}' AND 公司订单号 = '${foundOrder.公司订单号}' ORDER BY 登记时间 DESC`;
+    const orderStatusResult = await sql.query(orderStatusQuery);
+
+    if (orderStatusResult.recordset.length > 0) {
+      console.log('orderStatusResult.recordset[0]', orderStatusResult.recordset[0]);
+      // 如果部门订单状态表中有记录，返回订单
+      res.json({ status: 'found', data: orderStatusResult.recordset[0] });
+    } else {
+      // 如果部门订单状态表中没有记录，提示"订单不存在"
+      res.json({ status: 'not_found', message: '订单不存在' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 获取工序名称
 app.post('/getProcessOptions', async (req, res) => {
   const { drawingNumber, materialNumber, drawingVersion, purchaseOrder, serialNumber, companyOrder } = req.body;
@@ -391,6 +431,67 @@ app.post('/saveUserInfo', (req, res) => {
       );
     }
   });
+});
+
+// 扫码查看订单信息
+app.post('/viewOrder', async (req, res) => {
+  const { role, department, purchaseOrder, serialNumber, companyOrder } = req.body;
+
+  // 验证必要参数
+  if (!role || !purchaseOrder || !serialNumber || !companyOrder) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+
+  // 验证用户权限
+  if (role !== '超级管理员' && role !== '部门管理员') {
+    return res.status(403).json({ error: '无权访问此接口' });
+  }
+
+  // 如果是部门管理员，则必须提供部门信息
+  if (role === '部门管理员' && !department) {
+    return res.status(400).json({ error: '缺少部门信息' });
+  }
+
+  try {
+    await sql.connect(sqlConfig);
+
+    // 根据角色构建不同的查询语句
+    let query;
+    if (role === '超级管理员') {
+      query = `
+        SELECT TOP 1 * 
+        FROM 部门订单状态表 
+        WHERE 订单单号 = '${purchaseOrder}' 
+          AND 序号 = '${serialNumber}' 
+          AND 公司订单号 = '${companyOrder}'
+        ORDER BY 登记时间 DESC
+      `;
+    } else { // 部门管理员
+      query = `
+        SELECT TOP 1 * 
+        FROM 部门订单状态表 
+        WHERE 订单单号 = '${purchaseOrder}' 
+          AND 序号 = '${serialNumber}' 
+          AND 公司订单号 = '${companyOrder}'
+          AND 部门 = '${department}'
+        ORDER BY 登记时间 DESC
+      `;
+    }
+
+    const result = await sql.query(query);
+
+    // 检查是否查询到订单信息
+    if (result.recordset.length > 0) {
+      // 返回订单信息
+      res.json({ success: true, order: result.recordset[0] });
+    } else {
+      // 未查询到订单信息
+      res.json({ success: false, message: '订单不存在' });
+    }
+  } catch (err) {
+    console.error('查询订单信息出错:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(2910, () => {
