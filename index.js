@@ -196,7 +196,7 @@ app.post('/getProcessOptions', async (req, res) => {
       const record = result2.recordset[0]; // 获取第一条数据
       const stepList = record.加工状态 ? record.加工状态.split('→').filter(path => path.split('号')[1]).map(item2 => item2.split('号')[1]) : [];
       const newProcessOptions = processOptions.filter(item => !stepList.includes(item));
-      res.json({ processOptions: newProcessOptions, restartProcessOptions: [processOptions[0]] });
+      res.json({ processOptions: newProcessOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: stepList });
     } else {
       res.json({ processOptions: [] });
     }
