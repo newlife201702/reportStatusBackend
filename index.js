@@ -287,8 +287,7 @@ app.post('/reportStatus', async (req, res) => {
     }
 
     // 更新已存在的记录，而不是插入新记录
-    // 处理登记日期、登记时间、部门、登记人员字段，使用 → 累加原值
-    const newRegDate = record.登记日期 ? `${record.登记日期}→${chinaTimeString.slice(0, 10)}` : chinaTimeString.slice(0, 10);
+    // 处理登记时间、部门、登记人员字段，使用 → 累加原值
     const newRegTime = record.登记时间 ? `${record.登记时间}→${chinaTimeString}` : chinaTimeString;
     const newDepartment = record.部门 ? `${record.部门}→${department}` : department;
     const newStaff = record.登记人员 ? `${record.登记人员}→${name}` : name;
@@ -296,7 +295,7 @@ app.post('/reportStatus', async (req, res) => {
     const updateQuery = `UPDATE 部门订单状态表 
       SET 加工状态 = '${newProcess}', 
           图片存储路径 = '${newPhoto}',
-          登记日期 = '${newRegDate}', 
+          登记日期 = '${chinaTimeString.slice(0, 10)}', 
           登记时间 = '${newRegTime}',
           部门 = '${newDepartment}', 
           登记人员 = '${newStaff}'
