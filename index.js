@@ -358,7 +358,7 @@ app.post('/viewOrders', async (req, res) => {
       query = `
         SELECT * 
         FROM 部门订单状态表 
-        WHERE 部门 = '${department}' 
+        WHERE 部门 LIKE '%${department}%' 
         ORDER BY 订单单号, 序号, 公司订单号, 登记时间 DESC
       `;
     } else {
@@ -495,7 +495,7 @@ app.post('/viewOrder', async (req, res) => {
         WHERE 订单单号 = '${purchaseOrder}' 
           AND 序号 = '${serialNumber}' 
           AND 公司订单号 = '${companyOrder}'
-          AND 部门 = '${department}'
+          AND 部门 LIKE '%${department}%'
         ORDER BY 登记时间 DESC
       `;
     }
