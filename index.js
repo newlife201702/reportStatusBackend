@@ -335,7 +335,7 @@ app.post('/auth', (req, res) => {
 
 // 查看订单（分页查询）
 app.post('/viewOrders', async (req, res) => {
-  const { role, department, page = 1, pageSize = 10, drawingNumber, name } = req.body;
+  const { role, department, page = 1, pageSize = 10, drawingNumber, name, customerCode, companyOrder, lineNumber } = req.body;
 
   try {
     await sql.connect(sqlConfig);
@@ -377,7 +377,10 @@ app.post('/viewOrders', async (req, res) => {
     const filteredData = allData.filter((item) => {
       const matchDrawingNumber = drawingNumber ? item.图号 === drawingNumber : true;
       const matchName = name ? item.名称.includes(name) : true;
-      return matchDrawingNumber && matchName;
+      const matchCustomerCode = customerCode ? item.客户编码 === customerCode : true;
+      const matchCompanyOrder = companyOrder ? item.公司订单号 === companyOrder : true;
+      const matchLineNumber = lineNumber ? item.行号 === lineNumber : true;
+      return matchDrawingNumber && matchName && matchCustomerCode && matchCompanyOrder && matchLineNumber;
     });
 
     // 5. 分页
