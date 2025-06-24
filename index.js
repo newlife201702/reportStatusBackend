@@ -380,7 +380,9 @@ app.post('/viewOrders', async (req, res) => {
       const matchCustomerCode = customerCode ? item.客户编码 === customerCode : true;
       const matchCompanyOrder = companyOrder ? item.公司订单号 === companyOrder : true;
       const matchLineNumber = lineNumber ? item.行号 === lineNumber : true;
-      return matchDrawingNumber && matchName && matchCustomerCode && matchCompanyOrder && matchLineNumber;
+      // 确保加工状态不包含"检验入库"
+      const notInspectionStorage = item.加工状态 ? !item.加工状态.includes('检验入库') : true;
+      return matchDrawingNumber && matchName && matchCustomerCode && matchCompanyOrder && matchLineNumber && notInspectionStorage;
     });
 
     // 5. 分页
