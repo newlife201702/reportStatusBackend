@@ -289,7 +289,7 @@ app.post('/reportStatus', async (req, res) => {
     // 更新已存在的记录，而不是插入新记录
     // 处理登记时间、部门、登记人员字段，使用 → 累加原值
     const newRegTime = record.登记时间 ? `${record.登记时间}→${chinaTimeString}` : chinaTimeString;
-    const newDepartment = record.部门 ? `${record.部门}→${department}` : department;
+    const newDepartment = record.部门 ? record.部门 : department;
     const newStaff = record.登记人员 ? `${record.登记人员}→${name}` : name;
     
     const updateQuery = `UPDATE 部门订单状态表 
