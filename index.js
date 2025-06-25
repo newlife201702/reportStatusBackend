@@ -515,6 +515,6 @@ app.post('/viewOrder', async (req, res) => {
   }
 });
 
-app.listen(2910, () => {
-  console.log('Server is running on port 2910');
+app.listen(8788, () => {
+  console.log('Server is running on port 8788');
 });
