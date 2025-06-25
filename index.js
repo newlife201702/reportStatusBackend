@@ -191,14 +191,31 @@ app.post('/getProcessOptions', async (req, res) => {
       const result2 = await sql.query(query2);
       console.log('result2', result2);
       if (result2.recordset.length === 0) {
-        return res.json({ processOptions });
+        return res.json({ processOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: [] });
       }
       const record = result2.recordset[0]; // 获取第一条数据
       const stepList = record.加工状态 ? record.加工状态.split('→').filter(path => path.split('号')[1]).map(item2 => item2.split('号')[1]) : [];
       const newProcessOptions = processOptions.filter(item => !stepList.includes(item));
       res.json({ processOptions: newProcessOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: stepList });
     } else {
-      res.json({ processOptions: [] });
+      // 按"登记时间"倒序查询数据
+      const query2 = `
+        SELECT TOP 1 * 
+        FROM 部门订单状态表 
+        WHERE 订单单号 = '${purchaseOrder}' 
+          AND 序号 = '${serialNumber}' 
+          AND 公司订单号 = '${companyOrder}'
+        ORDER BY 登记时间 DESC
+      `;
+      console.log('query2', query2);
+      const result2 = await sql.query(query2);
+      console.log('result2', result2);
+      if (result2.recordset.length === 0) {
+        return res.json({ processOptions: [], restartProcessOptions: [], alreadyProcessOptions: [] });
+      }
+      const record = result2.recordset[0]; // 获取第一条数据
+      const stepList = record.加工状态 ? record.加工状态.split('→').filter(path => path.split('号')[1]).map(item2 => item2.split('号')[1]) : [];
+      res.json({ processOptions: [], restartProcessOptions: [], alreadyProcessOptions: stepList });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
