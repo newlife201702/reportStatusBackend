@@ -194,9 +194,27 @@ app.post('/getProcessOptions', async (req, res) => {
         return res.json({ processOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: [] });
       }
       const record = result2.recordset[0]; // 获取第一条数据
-      const stepList = record.加工状态 ? record.加工状态.split('→').filter(path => path.split('号')[1]).map(item2 => item2.split('号')[1]) : [];
+      // 保留原始状态列表，用于 alreadyProcessOptions
+      const originalAllSteps = record.加工状态 ? record.加工状态.split('→').filter(path => path.split('号')[1]).map(item2 => item2.split('号')[1]) : [];
+      
+      // 创建一个可修改的副本
+      const allSteps = [...originalAllSteps];
+      
+      // 查找最后一个包含"(零件报废)"的状态的索引
+      let scrapIndex = -1;
+      for (let i = allSteps.length - 1; i >= 0; i--) {
+        if (allSteps[i].includes('(零件报废)')) {
+          scrapIndex = i;
+          // 去掉该状态中的"(零件报废)"文本
+          allSteps[i] = allSteps[i].replace('(零件报废)', '').trim();
+          break;
+        }
+      }
+      
+      // 如果找到了报废状态，则只保留该状态及之后的状态；否则使用原来的全部状态
+      const stepList = scrapIndex >= 0 ? allSteps.slice(scrapIndex) : allSteps;
       const newProcessOptions = processOptions.filter(item => !stepList.includes(item));
-      res.json({ processOptions: newProcessOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: stepList });
+      res.json({ processOptions: newProcessOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: originalAllSteps });
     } else {
       // 按"登记时间"倒序查询数据
       const query2 = `
