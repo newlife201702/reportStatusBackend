@@ -242,7 +242,7 @@ app.post('/getProcessOptions', async (req, res) => {
 
 // 上报加工状态
 app.post('/reportStatus', async (req, res) => {
-  const { purchaseOrder, serialNumber, companyOrder, lineNumber, drawingNumber, orderName, process, photoUrl, name, department } = req.body;
+  const { purchaseOrder, serialNumber, companyOrder, lineNumber, drawingNumber, orderName, process, photoUrl, name, department, customerCode, materialCode } = req.body;
 
   try {
     await sql.connect(sqlConfig);
@@ -315,7 +315,7 @@ app.post('/reportStatus', async (req, res) => {
 
     if (result.recordset.length === 0) {
       console.log('reportStatus:未找到订单记录');
-      const insertNewQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径) VALUES ('${chinaTimeString.slice(0, 10)}', '${chinaTimeString}', '${companyOrder}', '${lineNumber}', '${drawingNumber}', '${orderName}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}')`;
+      const insertNewQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径, 客户编码, 物料编码) VALUES ('${chinaTimeString.slice(0, 10)}', '${chinaTimeString}', '${companyOrder}', '${lineNumber}', '${drawingNumber}', '${orderName}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}', '${customerCode}', '${materialCode}')`;
       console.log('部门订单状态表insertNewQuery', insertNewQuery);
       await sql.query(insertNewQuery);
       return res.json({ success: true });
