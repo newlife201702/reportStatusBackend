@@ -191,7 +191,10 @@ app.post('/getProcessOptions', async (req, res) => {
       const result2 = await sql.query(query2);
       console.log('result2', result2);
       if (result2.recordset.length === 0) {
-        return res.json({ processOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: [] });
+        // 添加额外的工序选项
+        const additionalProcesses = ['快递', '钳工'];
+        const processOptionsWithAdditional = [...processOptions, ...additionalProcesses];
+        return res.json({ processOptions: processOptionsWithAdditional, restartProcessOptions: [processOptionsWithAdditional[0]], alreadyProcessOptions: [] });
       }
       const record = result2.recordset[0]; // 获取第一条数据
       // 保留原始状态列表，用于 alreadyProcessOptions
@@ -214,7 +217,10 @@ app.post('/getProcessOptions', async (req, res) => {
       // 如果找到了报废状态，则只保留该状态及之后的状态；否则使用原来的全部状态
       const stepList = scrapIndex >= 0 ? allSteps.slice(scrapIndex) : allSteps;
       const newProcessOptions = processOptions.filter(item => !stepList.includes(item));
-      res.json({ processOptions: newProcessOptions, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: originalAllSteps });
+      // 添加额外的工序选项
+      const additionalProcesses = ['快递', '钳工'];
+      const newProcessOptionsWithAdditional = [...newProcessOptions, ...additionalProcesses];
+      res.json({ processOptions: newProcessOptionsWithAdditional, restartProcessOptions: [processOptionsWithAdditional[0]], alreadyProcessOptions: originalAllSteps });
     } else {
       // 按"登记时间"倒序查询数据
       const query2 = `
