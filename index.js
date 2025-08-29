@@ -194,7 +194,7 @@ app.post('/getProcessOptions', async (req, res) => {
         // 添加额外的工序选项
         const additionalProcesses = ['快递', '钳工'];
         const processOptionsWithAdditional = [...processOptions, ...additionalProcesses];
-        return res.json({ processOptions: processOptionsWithAdditional, restartProcessOptions: [processOptionsWithAdditional[0]], alreadyProcessOptions: [] });
+        return res.json({ processOptions: processOptionsWithAdditional, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: [] });
       }
       const record = result2.recordset[0]; // 获取第一条数据
       // 保留原始状态列表，用于 alreadyProcessOptions
@@ -220,7 +220,7 @@ app.post('/getProcessOptions', async (req, res) => {
       // 添加额外的工序选项
       const additionalProcesses = ['快递', '钳工'];
       const newProcessOptionsWithAdditional = [...newProcessOptions, ...additionalProcesses];
-      res.json({ processOptions: newProcessOptionsWithAdditional, restartProcessOptions: [processOptionsWithAdditional[0]], alreadyProcessOptions: originalAllSteps });
+      res.json({ processOptions: newProcessOptionsWithAdditional, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: originalAllSteps });
     } else {
       // 按"登记时间"倒序查询数据
       const query2 = `
