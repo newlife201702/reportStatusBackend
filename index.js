@@ -192,7 +192,7 @@ app.post('/getProcessOptions', async (req, res) => {
       console.log('result2', result2);
       if (result2.recordset.length === 0) {
         // 添加额外的工序选项
-        const additionalProcesses = ['快递', '钳工', '过程检验'];
+        const additionalProcesses = ['快递', '钳工', '过程检验', '待安排加工'];
         const processOptionsWithAdditional = [...processOptions, ...additionalProcesses];
         return res.json({ processOptions: processOptionsWithAdditional, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: [] });
       }
@@ -218,7 +218,7 @@ app.post('/getProcessOptions', async (req, res) => {
       const stepList = scrapIndex >= 0 ? allSteps.slice(scrapIndex) : allSteps;
       const newProcessOptions = processOptions.filter(item => !stepList.includes(item));
       // 添加额外的工序选项
-      const additionalProcesses = ['快递', '钳工', '过程检验'];
+      const additionalProcesses = ['快递', '钳工', '过程检验', '待安排加工'];
       const newProcessOptionsWithAdditional = [...newProcessOptions, ...additionalProcesses];
       res.json({ processOptions: newProcessOptionsWithAdditional, restartProcessOptions: [processOptions[0]], alreadyProcessOptions: originalAllSteps });
     } else {
