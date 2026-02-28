@@ -24,6 +24,36 @@ const sqlConfig = {
   }
 };
 
+// SQL Server 连接池（全局复用，避免频繁创建连接）
+let sqlPool;
+async function getSqlPool() {
+  if (sqlPool && sqlPool.connected) {
+    return sqlPool;
+  }
+
+  if (!sqlPool) {
+    sqlPool = new sql.ConnectionPool(sqlConfig);
+    sqlPool.on('error', (err) => {
+      console.error('SQL Server 连接池错误:', err);
+      // 出现错误时丢弃当前连接池，下次请求时重新创建
+      sqlPool = null;
+    });
+  }
+
+  if (!sqlPool.connected) {
+    try {
+      await sqlPool.connect();
+      console.log('SQL Server 已连接');
+    } catch (err) {
+      console.error('SQL Server 连接失败:', err);
+      sqlPool = null;
+      throw err;
+    }
+  }
+
+  return sqlPool;
+}
+
 // MySQL 配置
 const mysqlConfig = {
   host: '47.117.173.54',
@@ -31,6 +61,9 @@ const mysqlConfig = {
   password: '123456',
   database: 'reportstatus'
 };
+
+// MySQL 连接池（全局复用，避免连接泄漏）
+const mysqlPool = mysql.createPool(Object.assign({}, mysqlConfig, { connectionLimit: 10 }));
 
 // 微信配置
 const wxConfig = {
@@ -75,11 +108,11 @@ app.post('/scan', async (req, res) => {
   console.log("qrCodeData.split(',')", qrCodeData.split(','), '_, purchaseOrder, serialNumber, companyOrder', _, purchaseOrder, serialNumber, companyOrder);
 
   try {
-    await sql.connect(sqlConfig);
+    const pool = await getSqlPool();
 
     // 1. 先在订单条码表中查询
     const orderBarcodeQuery = `SELECT * FROM 订单条码表 WHERE 采购单号 = '${purchaseOrder}' AND 采购单序号 = '${serialNumber}' AND 公司订单号 = '${companyOrder}'`;
-    const orderBarcodeResult = await sql.query(orderBarcodeQuery);
+    const orderBarcodeResult = await pool.request().query(orderBarcodeQuery);
 
     let foundOrder;
     if (orderBarcodeResult.recordset.length === 0) {
@@ -93,7 +126,7 @@ app.post('/scan', async (req, res) => {
 
     // 2. 在部门未完成订单整理表中查询
     const unfinishedOrderQuery = `SELECT * FROM 部门未完成订单整理 WHERE 订单单号 = '${foundOrder.订单单号}' AND 序号 = '${foundOrder.序号}' AND 公司订单号 = '${foundOrder.公司订单号}'`;
-    const unfinishedOrderResult = await sql.query(unfinishedOrderQuery);
+    const unfinishedOrderResult = await pool.request().query(unfinishedOrderQuery);
 
     if (unfinishedOrderResult.recordset.length > 0) {
       console.log('unfinishedOrderResult.recordset[0]', unfinishedOrderResult.recordset[0]);
@@ -115,11 +148,11 @@ app.post('/adminScan', async (req, res) => {
   console.log("adminScan_qrCodeData.split(',')", qrCodeData.split(','), '_, purchaseOrder, serialNumber, companyOrder', _, purchaseOrder, serialNumber, companyOrder);
 
   try {
-    await sql.connect(sqlConfig);
+    const pool = await getSqlPool();
 
     // 1. 先在订单条码表中查询
     const orderBarcodeQuery = `SELECT * FROM 订单条码表 WHERE 采购单号 = '${purchaseOrder}' AND 采购单序号 = '${serialNumber}' AND 公司订单号 = '${companyOrder}'`;
-    const orderBarcodeResult = await sql.query(orderBarcodeQuery);
+    const orderBarcodeResult = await pool.request().query(orderBarcodeQuery);
 
     let foundOrder;
     if (orderBarcodeResult.recordset.length === 0) {
@@ -133,7 +166,7 @@ app.post('/adminScan', async (req, res) => {
 
     // 2. 在部门未完成订单整理表中查询
     const unfinishedOrderQuery = `SELECT * FROM 部门未完成订单整理 WHERE 订单单号 = '${foundOrder.订单单号}' AND 序号 = '${foundOrder.序号}' AND 公司订单号 = '${foundOrder.公司订单号}'`;
-    const unfinishedOrderResult = await sql.query(unfinishedOrderQuery);
+    const unfinishedOrderResult = await pool.request().query(unfinishedOrderQuery);
 
     if (unfinishedOrderResult.recordset.length > 0) {
       console.log('unfinishedOrderResult.recordset[0]', unfinishedOrderResult.recordset[0]);
@@ -164,9 +197,9 @@ app.post('/getProcessOptions', async (req, res) => {
   const { drawingNumber, materialNumber, drawingVersion, purchaseOrder, serialNumber, companyOrder } = req.body;
 
   try {
-    await sql.connect(sqlConfig);
+    const pool = await getSqlPool();
     const query = `SELECT 工序名称 FROM 零件工艺内容清单 WHERE 图号 = '${drawingNumber}' AND 物料编码 = '${materialNumber}' AND 图纸版本号 = '${drawingVersion}'`;
-    const result = await sql.query(query);
+    const result = await pool.request().query(query);
     console.log('result', result);
 
     if (result.recordset.length > 0) {
@@ -188,7 +221,7 @@ app.post('/getProcessOptions', async (req, res) => {
         ORDER BY 登记时间 DESC
       `;
       console.log('query2', query2);
-      const result2 = await sql.query(query2);
+      const result2 = await pool.request().query(query2);
       console.log('result2', result2);
       if (result2.recordset.length === 0) {
         // 添加额外的工序选项
@@ -232,7 +265,7 @@ app.post('/getProcessOptions', async (req, res) => {
         ORDER BY 登记时间 DESC
       `;
       console.log('query2', query2);
-      const result2 = await sql.query(query2);
+      const result2 = await pool.request().query(query2);
       console.log('result2', result2);
       if (result2.recordset.length === 0) {
         return res.json({ processOptions: [], restartProcessOptions: [], alreadyProcessOptions: [] });
@@ -251,7 +284,7 @@ app.post('/reportStatus', async (req, res) => {
   const { purchaseOrder, serialNumber, companyOrder, lineNumber, drawingNumber, orderName, process, photoUrl, name, department, customerCode, materialCode } = req.body;
 
   try {
-    await sql.connect(sqlConfig);
+    const pool = await getSqlPool();
     // const query = `
     //   UPDATE 部门订单状态表 
     //   SET 加工状态 = '${process}', 照片 = '${photoUrl}' 
@@ -285,7 +318,7 @@ app.post('/reportStatus', async (req, res) => {
         AND 公司订单号 = '${companyOrder}'
       ORDER BY 登记时间 DESC
     `;
-    const result = await sql.query(query);
+    const result = await pool.request().query(query);
 
     const record = result.recordset[0]; // 获取第一条数据
     console.log('部门订单状态表record', record);
@@ -323,7 +356,7 @@ app.post('/reportStatus', async (req, res) => {
       console.log('reportStatus:未找到订单记录');
       const insertNewQuery = `INSERT INTO 部门订单状态表 (登记日期, 登记时间, 公司订单号, 行号, 图号, 名称, 加工状态, 部门, 登记人员, 序号, 订单单号, 图片存储路径, 客户编码, 物料编码) VALUES ('${chinaTimeString.slice(0, 10)}', '${chinaTimeString}', '${companyOrder}', '${lineNumber}', '${drawingNumber}', '${orderName}', '${newProcess}', '${department}', '${name}', '${serialNumber}', '${purchaseOrder}', '${newPhoto}', '${customerCode}', '${materialCode}')`;
       console.log('部门订单状态表insertNewQuery', insertNewQuery);
-      await sql.query(insertNewQuery);
+      await pool.request().query(insertNewQuery);
       return res.json({ success: true });
     }
 
@@ -345,7 +378,7 @@ app.post('/reportStatus', async (req, res) => {
         AND 公司订单号 = '${companyOrder}'
         AND 登记时间 = '${record.登记时间}'`;
     console.log('部门订单状态表updateQuery', updateQuery);
-    await sql.query(updateQuery);
+    await pool.request().query(updateQuery);
 
     res.json({ success: true });
   } catch (err) {
@@ -366,8 +399,7 @@ app.post('/uploadPhoto', upload.single('photo'), (req, res) => {
 // 用户认证
 app.post('/auth', (req, res) => {
   const { openid } = req.body;
-  const connection = mysql.createConnection(mysqlConfig);
-  connection.query('SELECT * FROM 人员表 WHERE openid = ?', [openid], (error, results) => {
+  mysqlPool.query('SELECT * FROM 人员表 WHERE openid = ?', [openid], (error, results) => {
     console.log('auth_results', results);
     if (error) {
       res.status(500).json({ error: error.message });
@@ -384,7 +416,7 @@ app.post('/viewOrders', async (req, res) => {
   const { role, department, page = 1, pageSize = 10, drawingNumber, name, customerCode, companyOrder, lineNumber } = req.body;
 
   try {
-    await sql.connect(sqlConfig);
+    const pool = await getSqlPool();
 
     // 1. 查询所有数据
     let query;
@@ -405,7 +437,7 @@ app.post('/viewOrders', async (req, res) => {
       return res.status(403).json({ error: '无权访问' });
     }
 
-    const result = await sql.query(query);
+    const result = await pool.request().query(query);
 
     // 2. 分组并取每组最新数据
     const groupedData = {};
@@ -460,22 +492,18 @@ app.post('/saveUserInfo', (req, res) => {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
-  const connection = mysql.createConnection(mysqlConfig);
-  
   // 检查用户是否已存在
-  connection.query('SELECT * FROM 人员表 WHERE openid = ?', [openid], (error, results) => {
+  mysqlPool.query('SELECT * FROM 人员表 WHERE openid = ?', [openid], (error, results) => {
     if (error) {
-      connection.end();
       return res.status(500).json({ error: error.message });
     }
     
     if (results.length > 0) {
       // 用户已存在，更新信息
-      connection.query(
+      mysqlPool.query(
         'UPDATE 人员表 SET name = ?, role = ?, department = ? WHERE openid = ?',
         [name, role, department, openid],
         (updateError) => {
-          connection.end();
           if (updateError) {
             return res.status(500).json({ error: updateError.message });
           }
@@ -484,11 +512,10 @@ app.post('/saveUserInfo', (req, res) => {
       );
     } else {
       // 用户不存在，创建新用户
-      connection.query(
+      mysqlPool.query(
         'INSERT INTO 人员表 (openid, name, role, department) VALUES (?, ?, ?, ?)',
         [openid, name, role, department],
         (insertError) => {
-          connection.end();
           if (insertError) {
             return res.status(500).json({ error: insertError.message });
           }
@@ -519,7 +546,7 @@ app.post('/viewOrder', async (req, res) => {
   }
 
   try {
-    await sql.connect(sqlConfig);
+    const pool = await getSqlPool();
 
     // 根据角色构建不同的查询语句
     let query;
@@ -544,7 +571,7 @@ app.post('/viewOrder', async (req, res) => {
       `;
     }
 
-    const result = await sql.query(query);
+    const result = await pool.request().query(query);
 
     // 检查是否查询到订单信息
     if (result.recordset.length > 0) {
