@@ -173,7 +173,7 @@ app.post('/adminScan', async (req, res) => {
       // 如果部门未完成订单整理表中有记录，继续在部门订单状态表中查询
       // 3. 在部门订单状态表中查询
       const orderStatusQuery = `SELECT TOP 1 * FROM 部门订单状态表 WHERE 订单单号 = '${foundOrder.订单单号}' AND 序号 = '${foundOrder.序号}' AND 公司订单号 = '${foundOrder.公司订单号}' ORDER BY 登记时间 DESC`;
-      const orderStatusResult = await sql.query(orderStatusQuery);
+      const orderStatusResult = await pool.request().query(orderStatusQuery);
 
       if (orderStatusResult.recordset.length > 0) {
         console.log('orderStatusResult.recordset[0]', orderStatusResult.recordset[0]);
@@ -290,7 +290,7 @@ app.post('/reportStatus', async (req, res) => {
     //   SET 加工状态 = '${process}', 照片 = '${photoUrl}' 
     //   WHERE 订单单号 = '${purchaseOrder}' AND 序号 = '${serialNumber}' AND 公司订单号 = '${companyOrder}'
     // `;
-    // await sql.query(query);
+    // await pool.request().query(query);
 
     // 1. 查询当前加工状态和照片信息
     // const query = `
@@ -300,7 +300,7 @@ app.post('/reportStatus', async (req, res) => {
     //     AND 序号 = '${serialNumber}' 
     //     AND 公司订单号 = '${companyOrder}'
     // `;
-    // const result = await sql.query(query);
+    // const result = await pool.request().query(query);
 
     // if (result.recordset.length === 0) {
     //   return res.status(404).json({ error: '未找到订单记录' });
@@ -345,7 +345,7 @@ app.post('/reportStatus', async (req, res) => {
     //     AND 登记时间 = '${registrationTime}'
     // `;
     // console.log('部门订单状态表updateQuery', updateQuery);
-    // await sql.query(updateQuery);
+    // await pool.request().query(updateQuery);
 
 
     const chinaTime = new Date(now.getTime() + offset * 60 * 60 * 1000);
