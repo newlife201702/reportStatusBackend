@@ -56,7 +56,7 @@ async function getSqlPool() {
 
 // MySQL 配置
 const mysqlConfig = {
-  host: '47.117.173.54',
+  host: '118.25.182.111',
   user: 'reportStatus',
   password: '123456',
   database: 'reportstatus'
