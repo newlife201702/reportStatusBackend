@@ -392,7 +392,7 @@ app.post('/uploadPhoto', upload.single('photo'), (req, res) => {
     return res.status(400).json({ error: '未上传照片' });
   }
 
-  const photoUrl = `https://gongxuchaxun.weimeigu.com.cn/uploads/${req.file.filename}`;
+  const photoUrl = `https://www.yangyijin.asia/uploads/${req.file.filename}`;
   res.json({ url: photoUrl });
 });
 
